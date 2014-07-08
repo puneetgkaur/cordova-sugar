@@ -60,8 +60,8 @@ console.log("project_path:"+project_path+"; package_name:"+package_name+"; proje
 
 	
             // copy project template
-            shell.mkdir('-p',path.join(project_path,'project'));
-	    shell.cp('-r', path.join(project_template_dir,'project','*'), path.join(project_path,'project') );
+            shell.mkdir('-p',path.join(project_path,'project_template'));
+	    shell.cp('-r', path.join(project_template_dir,'project','*'), path.join(project_path,'project_template') );
 
 /*
             shell.cp('-r', path.join(project_template_dir, 'activity'),path.join(project_path,'project'));
