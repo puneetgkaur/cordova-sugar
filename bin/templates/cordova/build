@@ -19,6 +19,21 @@
        under the License.
 */
 
+var build = require('./lib/build'),
+    args  = process.argv;
+
+    // Support basic help commands
+    if(args[2] == '--help' || args[2] == '/?' || args[2] == '-h' ||
+                    args[2] == 'help' || args[2] == '-help' || args[2] == '/help') {
+    build.help();
+} else {
+    return build.run(args[2]);
+    
+}
+
+
+
+/*
 
 var shell   = require('shelljs'),
     path    = require('path'),
@@ -48,4 +63,4 @@ var file_prj_name= path.join(__dirname,'Project_Name.txt');
 
  
 //shell.mkdir('-p',path.join(project_path,'project'));
-
+*/
