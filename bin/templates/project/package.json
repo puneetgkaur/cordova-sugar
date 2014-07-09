@@ -4,10 +4,14 @@
     "baseUrl": "lib",
     "dependencies": {
       "sugar-web": "github:sugarlabs/sugar-web/master",
+<<<<<<< HEAD
       "domReady": "github:requirejs/domReady/2.0.1",
       "webL10n": "github:sugarlabs/webL10n/master",
       "mustache": "github:janl/mustache.js/0.7.2",
       "text": "github:requirejs/text/2.0.12"
+=======
+      "domReady": "github:requirejs/domReady/2.0.1"
+>>>>>>> 42affa55c975265aa541e63d86de806b1cb23899
     }
   }
 }
