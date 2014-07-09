@@ -1190,28 +1190,34 @@ function sugarExec(success, fail, service, action, args) {
      });
 */
 
+	var success_function = success;
+	var failure_function = fail;
+
 
 	function onResponseReceived(error, result) {
 
-
-	    if (!error ) {
+	    if (!error) {
 		//successhandler(result);
 		console.log("result : "+JSON.stringify(result));
+		//console.log("result : "+result);
+
 		console.log("Its success");
 		//cordova.callbackSuccess(callbackId,result);
-		success.apply(JSON.parse(result));
+		success_function(result);
 
 	    } else {
 		console.log("error:"+JSON.stringify(error));
-	        console.log("Its error");
+		console.log("Its error");
 		//cordova.callbackError(callbackId,error);
-		fail.apply(JSON.parse(error));
+		failure_function(error);
 	    }
 	}
+
 
  	bus.sendMessage("activity.cordova",[service,action,args],onResponseReceived);
 
 }
+
 
 
 module.exports = sugarExec;
