@@ -33,6 +33,8 @@ from jarabe.model import session
 from jarabe.journal.objectchooser import ObjectChooser
 
 import logging
+import random
+
 
 class StreamMonitor(object):
     def __init__(self):
@@ -102,6 +104,11 @@ class ActivityAPI(API):
 
         chooser.destroy()
 
+    def accelerometer(self,request):
+        logging.error("request : %s",request)
+        timestamp = time.time()
+        self._client.send_result(request,{'x':random.uniform(1, 10),'y':random.uniform(1, 10),'z':random.uniform(1, 10),'timestamp':timestamp,'keepCallback':True})
+
     def cordova(self,request):
 	logging.error("Reached apisocket.py cordova function")
 	class_name=request['params'][0]
@@ -120,7 +127,7 @@ class ActivityAPI(API):
 	cordova_method=getattr(cordova,"execute")
 	instance_cordova=cordova()
 	result=None
-	result=json.loads(cordova_method(instance_cordova,function_name,parameters))
+	result=json.loads(cordova_method(instance_cordova,function_name,parameters,request))
 	#result=json.loads(cordova_method(function_name,parameters))
 	logging.error(result)
 	#self._client.send_result(request,result)
@@ -149,13 +156,75 @@ class MyError(Exception):
 class cordova_classes:
 
     class Accelerometer:
-        def __init__(self):
-	    logging.error("accelerometer object initiated");
 
-        def execute(self,action,args):
-	
+        def __init__(self):
+	    logging.error("accelerometer object initiated")
+            self.RUNNING=False
+	    ACCELEROMETER_DEVICE = '/home/hello'
+	    fh = open(ACCELEROMETER_DEVICE)
+	    string = fh.read()
+	    xyz = string[1:-2].split(',')
+	    fh.close()
+	    self.x=0
+	    self.y=0
+	    self.z=0
+	    try:
+		self.x = float(xyz[0])
+		self.y = float(xyz[1])
+		self.z = float(xyz[2])
+	    except MyError as e:
+		logging.error("error %s",e)
+
+      
+        def random_number(self):
+            return random.uniform(1, 10)
+         
+        def detect_change_in_accelerometer(self):
+	    ACCELEROMETER_DEVICE = '/home/hello'
+	    fh = open(ACCELEROMETER_DEVICE)
+	    string = fh.read()
+	    xyz = string[1:-2].split(',')
+	    fh.close()
+	    x=0
+	    y=0
+	    z=0
+	    try:
+		x = float(xyz[0])
+		y = float(xyz[1])
+		z = float(xyz[2])
+	    except MyError as e:
+		logging.error("error %s",e)
+
+            if(x != self.x):
+                self.x=x
+                self.y=y
+                self.z=z
+                return True
+            else:
+                return False
+
+        def check_and_send_accelerometer(self):
+            timestamp = time.time()
+            while(True):
+                if( self.RUNNING == True):
+                    if( self.detect_change_in_accelerometer() == True):
+                        result={'x':self.x,'y':self.y,'z':self.z,'timestamp':timestamp,'keepCallback':True}
+                        self._client.send_result(self.request,result)
+             
+
+
+        def execute(self,action,args,request):
+	    
        	    if action == "start":
+
+                self.request = request
+
+                self.RUNNING=True
+
+                self.check_and_send_accelerometer()
+                    
 		#open the sugar build shell and cd to home and vi into a file named hello there
+                """
 	    	ACCELEROMETER_DEVICE = '/home/hello'
 	    	fh = open(ACCELEROMETER_DEVICE)
 	    	string = fh.read()
@@ -170,11 +239,19 @@ class cordova_classes:
 		    z = float(xyz[2])
 	    	except MyError as e:
 		    logging.error("error %s",e)
-	    	timestamp = time.time()
+	    	
 	        result_message= json.dumps({'x':x,'y':y,'z':z,'timestamp':timestamp,'keepCallback':True})
+                
+                timestamp = time.time()
+                result_message= json.dumps({'x':self.random_number(),'y':self.random_number(),'z':self.random_number(),'timestamp':timestamp,'keepCallback':True})
 	        result = json.dumps({'status':1,'message':result_message})
 	        return result
+                """
+
+
             elif action == "stop":
+                self.RUNNING=False
+                """
 	    	ACCELEROMETER_DEVICE = '/home/hello'
 	    	fh = open(ACCELEROMETER_DEVICE)
 	    	string = fh.read()
@@ -189,14 +266,13 @@ class cordova_classes:
 		    z = float(xyz[2])
 	    	except MyError as e:
 		    logging.error("error %s",e)
-	    	timestamp = time.time()
+	    	
 	        result_message= json.dumps({"x":x,"y":y,"z":z,"timestamp":timestamp,"keepCallback":True})
+                timestamp = time.time()
+                result_message= json.dumps({'x':self.random_number(),'y':self.random_number(),'z':self.random_number(),'timestamp':timestamp,'keepCallback':True})
 	        result = json.dumps({"status":1,"message":result_message})
 	        return result
-	    else:
-	        result_message= json.dumps({"x":0,"y":0,"z":0,"timestamp":0400,"keepCallback":True})
-	        result = json.dumps({"status":1,"message":result_message})
-	        return result
+	        """
         
 
 
