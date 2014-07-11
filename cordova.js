@@ -822,6 +822,7 @@ channel.waitForInitialization('onDOMContentLoaded');
 module.exports = channel;
 
 });
+
 // file: src/sugar/env.js
 define("cordova/sugar/env",function(require, exports, module){
 
@@ -1104,125 +1105,37 @@ console.log("Reached in websocket client send");
     module.exports = bus;
 });
 
+
+
 // file: src/sugar/exec.js
-define("cordova/exec",function(require, exports, module) {
+define("cordova/exec", function(require, exports, module) {
 
-/**
- * Execute a cordova command.  It is up to the native side whether this action
- * is synchronous or asynchronous.  The native side can return:
- *      Synchronous: PluginResult object as a JSON string
- *      Asynchronous: Empty string ""
- * If async, the native side will cordova.callbackSuccess or cordova.callbackError,
- * depending upon the result of the action.
- *
- * @param {Function} success    The success callback
- * @param {Function} fail       The fail callback
- * @param {String} service      The name of the service to use
- * @param {String} action       Action to be run in cordova
- * @param {String[]} [args]     Zero or more arguments to pass to the method
- */
+//var sugar = require('cordova/platform');
+var cordova = require('cordova');
+var execProxy = require('cordova/exec/proxy');
 
-var cordova = require('cordova'),
-    utils = require('cordova/utils'),
-    base64 = require('cordova/base64'),
-    bus = require('cordova/sugar/bus');
-
-// NEED TO LOAD THE SUGAR-WEB ACTIVITY MODULE
-// THE SAME WAY AS PLUGIN FILES LIKE ACCELEROMETER.JS LOADED
-// SEE CORDOVA/PLUGINLOADER FOR FURTHER CODE
-
-//get the path where the cordova.js currently is
-
-function getCordovaPath() {
-    var path = null;
-    var scripts = document.getElementsByTagName('script');
-    var term = 'cordova.js';
-    for (var n = scripts.length-1; n>-1; n--) {
-        var src = scripts[n].src;
-        if (src.indexOf(term) == (src.length - term.length)) {
-            path = src.substring(0, src.length - term.length);
-            break;
+module.exports = function(success, fail, service, action, args) {
+    var proxy = execProxy.get(service,action);
+    if(proxy) {
+        var callbackId = service + cordova.callbackId++;
+        //console.log("EXEC:" + service + " : " + action);
+        if (typeof success == "function" || typeof fail == "function") {
+            cordova.callbacks[callbackId] = {success:success, fail:fail};
+        }
+        try {
+            proxy(success, fail, args);
+        }
+        catch(e) {
+            console.log("Exception calling native with command :: " + service + " :: " + action  + " ::exception=" + e);
         }
     }
-    return path;
-}
-/*
-//add to the cordova.js path the path to sugar-web activity 
-var path_to_sugar_web=getCordovaPath()+'sugar-web-lib/sugar-web/activity/activity.js';
-console.log("path to sugar web"+path_to_sugar_web);
-
-//now inject the sugar web activity script
-var script = document.createElement("script");
-script.src = path_to_sugar_web;
-document.head.appendChild(script);
-
-*/
-
-//STRATEGY : open the bus and env of sugar using node.js and manipulate it and write down the new bus and env.js
-//now inject the code of the new env and bus written
-
-bus.listen();
-
-function sugarExec(success, fail, service, action, args) {
-
-    // Process any ArrayBuffers in the args into a string.
-    for (var i = 0; i < args.length; i++) {
-        if (utils.typeName(args[i]) == 'ArrayBuffer') {
-            args[i] = base64.fromArrayBuffer(args[i]);
-        }
+    else {
+        fail && fail("Missing Command Error");
     }
-
-    var callbackId = service + cordova.callbackId++,
-        argsJson = JSON.stringify(args);
-
-    if (success || fail) {
-    console.log("either success or failure");
-        cordova.callbacks[callbackId] = {success:success, fail:fail};
-    }
-
-    console.log("callbackId"+callbackId);
-    console.log("cordova.callbacks[callbackId]"+cordova.callbacks[callbackId]);
-
-/*
-     require(['activity'], function (activity) {
-	activity.cordova(service,action,argsJson,callbackId);
-	console.log(activity);
-     });
-*/
-
-	var success_function = success;
-	var failure_function = fail;
-
-
-	function onResponseReceived(error, result) {
-
-	    if (!error) {
-		//successhandler(result);
-		console.log("result : "+JSON.stringify(result));
-		//console.log("result : "+result);
-
-		console.log("Its success");
-		//cordova.callbackSuccess(callbackId,result);
-		success_function(result);
-
-	    } else {
-		console.log("error:"+JSON.stringify(error));
-		console.log("Its error");
-		//cordova.callbackError(callbackId,error);
-		failure_function(error);
-	    }
-	}
-
-
- 	bus.sendMessage("activity.cordova",[service,action,args],onResponseReceived);
-
-}
-
-
-
-module.exports = sugarExec;
+};
 
 });
+
 
 // file: src/common/exec/proxy.js
 define("cordova/exec/proxy", function(require, exports, module) {
@@ -1253,6 +1166,16 @@ module.exports = {
     }
 };
 });
+
+
+// file: src/sugar/sugar/commandProxy.js
+define("cordova/sugar/commandProxy", function(require, exports, module) {
+
+console.log('WARNING: please require cordova/exec/proxy instead');
+module.exports = require('cordova/exec/proxy');
+
+});
+
 
 // file: src/common/init.js
 define("cordova/init", function(require, exports, module) {
@@ -1474,12 +1397,14 @@ exports.reset();
 define("cordova/platform", function(require, exports, module) {
 module.exports = {
     id: 'sugar',
+    cordovaVersion: '3.5.0',
     bootstrap: function() {
         var cordova = require('cordova'),
             exec = require('cordova/exec'),
             channel = require("cordova/channel"),
 	    modulemapper = require('cordova/modulemapper');
 
+        require('cordova/modulemapper').clobbers('cordova/exec/proxy', 'cordova.commandProxy');
 	require('cordova/channel').onNativeReady.fire();
 
 
