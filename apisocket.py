@@ -168,12 +168,6 @@ class ActivityAPI(API):
         self._client.send_result(request,{'x':random.uniform(1, 10),'y':random.uniform(1, 10),'z':random.uniform(1, 10),'timestamp':timestamp,'keepCallback':True})
 
 	
-class MyError(Exception):
-    def __init__(self, value):
-        self.value = value
-    def __str__(self):
-        return repr(self.value)
-
 
 class DatastoreAPI(API):
     def __init__(self, client):
