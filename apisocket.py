@@ -35,6 +35,13 @@ from jarabe.journal.objectchooser import ObjectChooser
 import logging
 import random
 
+import base64
+import pygame
+
+import pygame.camera 
+from pygame.locals import *
+#from sugar3.graphics.objectchooser import ObjectChooser
+
 
 class StreamMonitor(object):
     def __init__(self):
@@ -90,8 +97,9 @@ class ActivityAPI(API):
     def _session_manager_shutdown_cb(self, event):
         self._client.send_notification("activity.stop")
 
+
     def show_object_chooser(self, request):
-        chooser = ObjectChooser(self._activity)
+        chooser = ObjectChooser(self._activity, what_filter='Image')
         chooser.connect('response', self._chooser_response_cb, request)
         chooser.show()
 
@@ -101,8 +109,58 @@ class ActivityAPI(API):
             self._client.send_result(request, [object_id])
         else:
             self._client.send_result(request, [None])
-
         chooser.destroy()
+
+    def camera(self,request):
+        os.environ['SDL_VIDEO_CENTERED'] = '1'
+        pygame.init()
+	pygame.camera.init()
+        screen=pygame.display.set_mode((640,480),pygame.NOFRAME )
+        pygame.display.set_caption("Click mouse/ press a key / close window to snap a photog")
+    	camlist = pygame.camera.list_cameras()
+    	if camlist:
+            self.cam = pygame.camera.Camera(camlist[0],(640,480))
+	self.cam.start()
+        quit_loop=0
+        while quit_loop == 0:
+	    self.image=self.cam.get_image()
+	    screen.blit(self.image,(0,0))
+	    pygame.display.update()
+	    for event in pygame.event.get():
+		if event.type == pygame.QUIT or  (event.type == KEYDOWN and event.key == K_ESCAPE) or (event.type == MOUSEBUTTONDOWN):
+		    #save the image
+		    self.image=self.cam.get_image()
+		    self.cam.stop()
+                    pygame.display.quit()
+                    quit_loop=1
+        self._client.send_result(request,"image")            
+
+   
+    def conversionToBase64(self,request):
+        """
+        chooser = ObjectChooser(self._activity, what_filter='Image')
+        try:
+            result = chooser.run()
+            if result == Gtk.ResponseType.ACCEPT:
+                logging.debug('ObjectChooser: %r',
+                              chooser.get_selected_object())
+                jobject = chooser.get_selected_object()
+                if jobject and jobject.file_path:
+                    self._activity.area.load_image(jobject.file_path)
+        finally:
+            chooser.destroy()
+            del chooser
+        self._client.send_result(request, [None])
+        """  
+	CAMERA = '/home/broot/Documents/Photo by broot.jpe'
+	fh = open(CAMERA)
+	string = fh.read()
+	fh.close()
+        logging.error("reached camera function inside apisocket.py")        
+        encoded_string = base64.b64encode(string)
+	self._client.send_result(request,encoded_string)
+
+
 
     def accelerometer(self,request):
         logging.error("request : %s",request)
