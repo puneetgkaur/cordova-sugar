@@ -36,11 +36,14 @@ import logging
 import random
 
 import base64
-import pygame
+#import pygame
 
-import pygame.camera 
-from pygame.locals import *
+#import pygame.camera 
+#from pygame.locals import *
+
 #from sugar3.graphics.objectchooser import ObjectChooser
+
+from ssGUI import WebcamManager
 
 
 class StreamMonitor(object):
@@ -99,7 +102,7 @@ class ActivityAPI(API):
 
 
     def show_object_chooser(self, request):
-        chooser = ObjectChooser(self._activity, what_filter='Image')
+        chooser = ObjectChooser(self._activity)
         chooser.connect('response', self._chooser_response_cb, request)
         chooser.show()
 
@@ -111,7 +114,24 @@ class ActivityAPI(API):
             self._client.send_result(request, [None])
         chooser.destroy()
 
+
+    def cordova_camera_show_object_chooser(self, request):
+        chooser = ObjectChooser(self._activity, what_filter='Image')
+        chooser.connect('response', self.cordova_camera_chooser_response_cb, request)
+        chooser.show()
+
+    def cordova_camera_chooser_response_cb(self, chooser, response_id, request):
+        if response_id == Gtk.ResponseType.ACCEPT:
+            object_id = chooser.get_selected_object_id()
+            self._client.send_result(request, [object_id])
+        else:
+            self._client.send_result(request, [None])
+        chooser.destroy()
+
+
+
     def camera(self,request):
+        """
         os.environ['SDL_VIDEO_CENTERED'] = '1'
         pygame.init()
 	pygame.camera.init()
@@ -119,23 +139,39 @@ class ActivityAPI(API):
         pygame.display.set_caption("Click mouse/ press a key / close window to snap a photog")
     	camlist = pygame.camera.list_cameras()
     	if camlist:
-            self.cam = pygame.camera.Camera(camlist[0],(640,480))
-	self.cam.start()
+            cam = pygame.camera.Camera(camlist[0],(640,480))
+	cam.start()
         quit_loop=0
+        base64data=None
+        x=None
+        data=None
+        cam_image=cam.get_image()
         while quit_loop == 0:
-	    self.image=self.cam.get_image()
-	    screen.blit(self.image,(0,0))
+	    cam_image=cam.get_image()
+	    screen.blit(cam_image,(0,0))
 	    pygame.display.update()
 	    for event in pygame.event.get():
 		if event.type == pygame.QUIT or  (event.type == KEYDOWN and event.key == K_ESCAPE) or (event.type == MOUSEBUTTONDOWN):
 		    #save the image
-		    self.image=self.cam.get_image()
-		    self.cam.stop()
+                    data = pygame.image.tostring(screen,"RGBA")
+                    base64data = base64.b64encode(data)
+                    #logging.error("base64 :\n %s",base64data)
+		    #cam_image=cam.get_image()
+		    cam.stop()
                     pygame.display.quit()
                     quit_loop=1
-        self._client.send_result(request,"image")            
+        logging.error("got base64 image")
+        #logging.error("base64 :\n %s",base64data)
+        pygame.image.save(cam_image,"/home/broot/Documents/image.jpg")
+        #logging.error("josn dumps base64 :\n %s",json.dumps(base64data))
+        self._client.send_result(request,base64data)
+        """
+        cam = WebcamManager('/dev/video0',['640:480'],'jpeg')
+        cam.run()
+        self._client.send_result(request,[None])
 
-   
+
+
     def conversionToBase64(self,request):
         """
         chooser = ObjectChooser(self._activity, what_filter='Image')
@@ -167,7 +203,191 @@ class ActivityAPI(API):
         timestamp = time.time()
         self._client.send_result(request,{'x':random.uniform(1, 10),'y':random.uniform(1, 10),'z':random.uniform(1, 10),'timestamp':timestamp,'keepCallback':True})
 
+    def cordova(self,request):
+	logging.error("Reached apisocket.py cordova function")
+	class_name=request['params'][0]
+	logging.error("classname")
+	logging.error(class_name)
+        function_name=request['params'][1]
+	logging.error("function name")
+	logging.error(function_name)
+	parameters=request['params'][2]
+	logging.error("parameters:")
+	logging.error(parameters)
+	logging.error("not parameter:")
+	logging.error(not parameters)
+	#cordova=eval(class_name)()
+	cordova=getattr(cordova_classes,class_name)
+	cordova_method=getattr(cordova,"execute")
+	instance_cordova=cordova()
+	result=None
+	result=json.loads(cordova_method(instance_cordova,function_name,parameters,request))
+	#result=json.loads(cordova_method(function_name,parameters))
+	logging.error(result)
+	#self._client.send_result(request,result)
 	
+	#dependiing on whether twe got the result or got some error
+	#we check the value returned by the function invoked
+	
+	if result['status'] == 1 or result['status'] == 0:
+	    #call the send_result function for the client object
+	    logging.error("result.status == 0 or 1")
+	    self._client.send_result(request,json.loads(result['message']))
+	else:
+	    #call the send_error function for the client object
+	    logging.error("result not equal 0 or 1")
+	    self._client.send_error(request,json.loads(result['message']))
+	
+
+	
+class MyError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+
+
+class cordova_classes:
+
+    class Accelerometer:
+
+        def __init__(self):
+	    logging.error("accelerometer object initiated")
+            self.RUNNING=False
+	    ACCELEROMETER_DEVICE = '/home/hello'
+	    fh = open(ACCELEROMETER_DEVICE)
+	    string = fh.read()
+	    xyz = string[1:-2].split(',')
+	    fh.close()
+	    self.x=0
+	    self.y=0
+	    self.z=0
+	    try:
+		self.x = float(xyz[0])
+		self.y = float(xyz[1])
+		self.z = float(xyz[2])
+	    except MyError as e:
+		logging.error("error %s",e)
+
+      
+        def random_number(self):
+            return random.uniform(1, 10)
+         
+        def detect_change_in_accelerometer(self):
+	    ACCELEROMETER_DEVICE = '/home/hello'
+	    fh = open(ACCELEROMETER_DEVICE)
+	    string = fh.read()
+	    xyz = string[1:-2].split(',')
+	    fh.close()
+	    x=0
+	    y=0
+	    z=0
+	    try:
+		x = float(xyz[0])
+		y = float(xyz[1])
+		z = float(xyz[2])
+	    except MyError as e:
+		logging.error("error %s",e)
+
+            if(x != self.x):
+                self.x=x
+                self.y=y
+                self.z=z
+                return True
+            else:
+                return False
+
+        def check_and_send_accelerometer(self):
+            timestamp = time.time()
+            while(True):
+                if( self.RUNNING == True):
+                    if( self.detect_change_in_accelerometer() == True):
+                        result={'x':self.x,'y':self.y,'z':self.z,'timestamp':timestamp,'keepCallback':True}
+                        self._client.send_result(self.request,result)
+             
+
+
+        def execute(self,action,args,request):
+	    
+       	    if action == "start":
+
+                self.request = request
+
+                self.RUNNING=True
+
+                self.check_and_send_accelerometer()
+                    
+		#open the sugar build shell and cd to home and vi into a file named hello there
+                """
+	    	ACCELEROMETER_DEVICE = '/home/hello'
+	    	fh = open(ACCELEROMETER_DEVICE)
+	    	string = fh.read()
+	    	xyz = string[1:-2].split(',')
+	    	fh.close()
+	    	x=0
+	    	y=0
+	    	z=0
+	    	try:
+		    x = float(xyz[0])
+		    y = float(xyz[1])
+		    z = float(xyz[2])
+	    	except MyError as e:
+		    logging.error("error %s",e)
+	    	
+	        result_message= json.dumps({'x':x,'y':y,'z':z,'timestamp':timestamp,'keepCallback':True})
+                
+                timestamp = time.time()
+                result_message= json.dumps({'x':self.random_number(),'y':self.random_number(),'z':self.random_number(),'timestamp':timestamp,'keepCallback':True})
+	        result = json.dumps({'status':1,'message':result_message})
+	        return result
+                """
+
+
+            elif action == "stop":
+                self.RUNNING=False
+                """
+	    	ACCELEROMETER_DEVICE = '/home/hello'
+	    	fh = open(ACCELEROMETER_DEVICE)
+	    	string = fh.read()
+	    	xyz = string[1:-2].split(',')
+	    	fh.close()
+	    	x=0
+	    	y=0
+	    	z=0
+	    	try:
+		    x = float(xyz[0])
+		    y = float(xyz[1])
+		    z = float(xyz[2])
+	    	except MyError as e:
+		    logging.error("error %s",e)
+	    	
+	        result_message= json.dumps({"x":x,"y":y,"z":z,"timestamp":timestamp,"keepCallback":True})
+                timestamp = time.time()
+                result_message= json.dumps({'x':self.random_number(),'y':self.random_number(),'z':self.random_number(),'timestamp':timestamp,'keepCallback':True})
+	        result = json.dumps({"status":1,"message":result_message})
+	        return result
+	        """
+        
+
+
+        def getCurrentAcceleration(self,result,error,parameters=None):
+	    coordinates={5,6}
+	    result=coordinates
+	
+       	    #return if the function ran successfully
+	    #can return different values of the error and success as we 
+	    #proceed as per the logic of this python function as per
+	    #the function needs
+	    #currently keep it simple and return 1 to show success
+	    #if encounter error, assign the value of error and return 0 to denote failure
+	    #
+	    #result and error are initially before the call set to None
+	    #Now if there is any kiind of error assign the type of error to the variable error and return 0
+	    #Else assign the result and return 1
+
+	    #iin case of success we have result key iin the json with the result value else iinicase of failure we have the error key in the json dump, the fist key isi always success to symbolize whether we have the error key or the result key, thats is whether iti was a success or a failure
+            return 1
+    
 
 class DatastoreAPI(API):
     def __init__(self, client):
