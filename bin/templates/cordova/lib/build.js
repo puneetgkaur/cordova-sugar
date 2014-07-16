@@ -28,6 +28,8 @@ var www_dir = path.join(__dirname,"..","..","www");
 
 var project_dir=path.join(__dirname,"..","project");
 
+shell.rm('-rf',project_dir);
+
 shell.mkdir('-p',project_dir);
 
 var project_template_dir=path.join(__dirname,"..","..","project_template")
@@ -133,7 +135,16 @@ function generate_xo()
 	  shell.mkdir('-p',activity_dir);
           shell.cp('-rf', path.join(project_dir,'*'),path.join(activity_dir));
 	  shell.cd(sugar_cordova_dir);
-	  shell.exec("zip -r "+data+".xo "+data+".activity");
+          zipCommand=process.env.ZIPCOMMAND;
+          console.log("zip command : "+zipCommand);
+          if(zipCommand == undefined)
+          {
+	      shell.exec("zip -r "+data+".xo "+data+".activity");
+          }
+          else
+          {
+              shell.exec(zipCommand+" "+data+".xo "+data+".activity");
+          }
 	  console.log("the .xo file is stored at : "+ sugar_cordova_dir);
 	});
 
