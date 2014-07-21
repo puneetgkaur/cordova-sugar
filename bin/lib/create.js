@@ -27,7 +27,7 @@ var shell = require('shelljs'),
 
 exports.createProject = function(project_path, package_name, project_name, project_template_dir, use_shared_project, use_cli_template) {
 
-console.log("project_path:"+project_path+"; package_name:"+package_name+"; project_name:"+project_name+"; project_template_dir:"+project_template_dir+"; use_shared_project:"+use_shared_project+"; use_cli_template:"+use_cli_template);
+//console.log("project_path:"+project_path+"; package_name:"+package_name+"; project_name:"+project_name+"; project_template_dir:"+project_template_dir+"; use_shared_project:"+use_shared_project+"; use_cli_template:"+use_cli_template);
 
 
     var VERSION = fs.readFileSync(path.join(ROOT, 'VERSION'), 'utf-8').trim();
