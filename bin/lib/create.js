@@ -62,7 +62,7 @@ exports.createProject = function(project_path, package_name, project_name, proje
             // copy project template
             shell.mkdir('-p',path.join(project_path,'project_template'));
 	    shell.cp('-r', path.join(project_template_dir,'project','*'), path.join(project_path,'project_template') );
-
+            shell.cp('-r', path.join(ROOT, 'cordova.js'), path.join(project_path,'www') ); 
 /*
             shell.cp('-r', path.join(project_template_dir, 'activity'),path.join(project_path,'project'));
             shell.cp('-r', path.join(project_template_dir, 'css'), path.join(project_path,'project'));
